@@ -1,6 +1,7 @@
 var db=require('../config/connection')
 var collection=require('../config/collections')
 var bcrypt=require('bcrypt')
+const collections = require('../config/collections')
 var ObjectId=require('mongodb').ObjectID
 
 
@@ -84,6 +85,16 @@ module.exports={
                 }
             ]).toArray()
             resolve(cartItems[0].cartItems)
+        })
+    },
+    getCartCount:(userId)=>{
+        return new Promise(async(resolve,reject)=>{
+            let count=0
+            let cart=await db.gets().collection(collection.CART_COLLECTION).findOne({user:ObjectId(userId)})
+            if(cart){
+                count=cart.products.length
+            }
+            resolve(count)
         })
     }
 }
