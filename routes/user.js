@@ -1,4 +1,6 @@
+const { use } = require('bcrypt/promises');
 var express = require('express');
+const async = require('hbs/lib/async');
 var router = express.Router();
 
 var productHelper=require('../helpers/product-helpers')
@@ -77,10 +79,18 @@ router.get('/add-to-cart/:id',(req,res)=>{
 })
 router.post('/change-product-quantity',(req,res,next)=>{
   console.log(req.body);
-  userHelpers.changeProductQuantity(req.body).then(()=>{
+  userHelpers.changeProductQuantity(req.body).then((response)=>{
+    res.json(response)
+  })
+})
+router.post('/remove-product-cart',(req,res,next)=>{
+  userHelpers.removeProductCart(req.body).then(()=>{
 
   })
 })
-
+router.get('/place-order',verifyLogin,async(req,res)=>{
+  let total=await userHelpers.getTotalAmount(req.session.user._id)
+  res.render('user/place-order',{total})
+})
 
 module.exports = router;
