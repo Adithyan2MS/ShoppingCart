@@ -67,7 +67,10 @@ router.get('/logout',(req,res)=>{
 })
 router.get('/cart',verifyLogin,async(req,res)=>{
   let products=await userHelpers.getCartProducts(req.session.user._id)
-  let totalValue=await userHelpers.getTotalAmount(req.session.user._id)
+  let totalValue=0
+  if(products.length>0){
+    totalValue=await userHelpers.getTotalAmount(req.session.user._id)
+  }
   res.render('user/cart',{products,user:req.session.user._id,totalValue})
 })
 
@@ -97,13 +100,40 @@ router.post('/place-order',async(req,res,next)=>{
   console.log(req.body);
   let products=await userHelpers.getCartProductList(req.body.userId)
   let totalPrice=await userHelpers.getTotalAmount(req.body.userId)
-  userHelpers.placeOrder(req.body,products,totalPrice).then((response)=>{
-    res.json({status:true})
+  userHelpers.placeOrder(req.body,products,totalPrice).then((orderId)=>{
+    if(req.body['payment-method']==='COD'){
+      res.json({codSuccess:true})
+    }
+    else{
+      userHelpers.generateRazorpay(orderId,totalPrice).then((response)=>{
+        res.json(response)
+      })
+    }
+    
   })
 })
 router.get('/order-success',(req,res)=>{
   console.log("keriyeda");
   res.render('user/order-success',{user:req.session.user})
 })
-
+router.get('/orders',async(req,res)=>{
+  let orders=await userHelpers.getUserOrders(req.session.user._id)
+  res.render('user/orders',{user:req.session.user,orders})
+})
+router.get('/view-order-products/:id',async(req,res)=>{
+  let products=await userHelpers.getOrderProducts(req.params.id)
+  res.render('user/view-order-products',{user:req.session.user,products})
+})
+router.get('/verify-payment',(req,res)=>{
+  console.log(req.body);
+  userHelpers.verifyPayment(req.body).then(()=>{
+    userHelpers.changePaymentStatus(req.body['order[receipt]']).then(()=>{
+      console.log('payment successfull');
+      res.json({status:true})
+    })
+  }).catch((err)=>{
+    console.log(err);
+    res.json({status:false,errMsg:''})
+  })
+})
 module.exports = router;

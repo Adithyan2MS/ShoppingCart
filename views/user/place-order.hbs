@@ -10,7 +10,7 @@
                         <label for="">Address</label><br>
                         <input class="form-control" type="text" id="address" name="address"><br>
                         <label for="">Pincode</label><br>
-                        <input class="form-control" type="text" id="pincode" name="pincode"><br>                        
+                        <input class="form-control" type="text" id="pincode" name="pincode"><br>
                         <label for="">Mobile</label><br>
                         <input class="form-control" type="text" id="mobile" name="mobile"><br>
                         <input type="text" name="userId" id="" value="{{user._id}}" hidden>
@@ -29,8 +29,8 @@
                         <label for="">
                             <input type="radio" name="payment-method" value="ONLINE">Online Payment
                         </label>
-                        <button class="btn btn-primary float-right" type="submit">checkout</button>                
-                        </div>
+                        <button class="btn btn-primary float-right" type="submit">checkout</button>
+                    </div>
 
                 </div>
             </div>
@@ -39,22 +39,71 @@
 
     </div>
 </section>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
-    $("#checkout-form").submit((e)=>{
+    $("#checkout-form").submit((e) => {
         e.preventDefault();
         $.ajax({
-            url:'/place-order',
-            type:'POST',
-            data:$('#checkout-form').serialize(),
-            success:(response)=>{
+            url: '/place-order',
+            type: 'POST',
+            data: $('#checkout-form').serialize(),
+            success: (response) => {
                 alert(response)
-                if(response.status){
-                    location.href='/order-success'
+                if (response.codSuccess) {
+                    location.href = '/order-success'
+                } else {
+                    razorpayPayment(response)
                 }
             }
         })
-        
-    })
-    
-</script>
 
+    })
+    function razorpayPayment(order) {
+        var options = {
+            "key": "rzp_test_E7ywZs6Ev4yibJ", // Enter the Key ID generated from the Dashboard
+            "amount": order.amount, // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
+            "currency": "INR",
+            "name": "Adithyan M S",
+            "description": "Test Transaction",
+            "image": "https://example.com/your_logo",
+            "order_id": order.id, //This is a sample Order ID. Pass the `id` obtained in the response of Step 1
+            "handler": function (response) {
+                //(response.razorpay_payment_id);
+                //alert(response.razorpay_order_id);
+                //alert(response.razorpay_signature);
+
+                verifyPayment(response,order)
+            },
+            "prefill": {
+                "name": "Gaurav Kumar",
+                "email": "gaurav.kumar@example.com",
+                "contact": "9999999999"
+            },
+            "notes": {
+                "address": "Razorpay Corporate Office"
+            },
+            "theme": {
+                "color": "#3399cc"
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        rzp1.open();
+    }
+    function verifyPayment(payment,order){
+        $.ajax({
+            url:'/verify-payment',
+            data:{
+                payment,
+                order
+            },
+            method:'post',
+            success:(response)=>{
+                if(response.status){
+                    location.href='/order-success'
+                }else{
+                    alert("Payment failed")
+                }
+            }
+        })
+    }
+</script>
