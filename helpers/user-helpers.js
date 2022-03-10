@@ -2,6 +2,9 @@ var db=require('../config/connection')
 var collection=require('../config/collections')
 var bcrypt=require('bcrypt')
 const collections = require('../config/collections')
+const { log } = require('handlebars')
+const async = require('hbs/lib/async')
+const { response } = require('express')
 var ObjectId=require('mongodb').ObjectID
 
 
@@ -139,8 +142,8 @@ module.exports={
                     .updateOne({_id:ObjectId(details.cart),'products.item':ObjectId(details.product)},
                     {
                         $inc:{'products.$.quantity':details.count}
-                    }).then(()=>{
-                        resolve(true)
+                    }).then((response)=>{
+                        resolve({status:true})
                     })
             }
         })
@@ -193,6 +196,35 @@ module.exports={
                 }
             ]).toArray()
             resolve(total[0].total)
+        })
+    },
+    placeOrder:(order,products,total)=>{
+        return new Promise((resolve,reject)=>{
+            console.log(order,products,total);
+            let status=order['payment-method']==='COD'?'placed':'pending'
+            let orderObj={
+                deliveryDetails:{
+                    mobile:order.mobile,
+                    address:order.address,
+                    pincode:order.pincode
+                },
+                userId:ObjectId(order.userId),
+                paymentMethod:order['payment-method'],
+                products:products,
+                totalAmount:total,
+                status:status,
+                date:new Date()
+            }
+            db.gets().collection(collection.ORDER_COLLECTION).insertOne(orderObj).then((response)=>{
+                db.gets().collection(collection.CART_COLLECTION).deleteOne({user:ObjectId(order.userId)})
+                resolve()
+            })
+        })
+    },
+    getCartProductList:(userId)=>{
+        return new Promise(async(resolve,reject)=>{
+            let cart=await db.gets().collection(collection.CART_COLLECTION).findOne({user:ObjectId(userId)})
+            resolve(cart.products)
         })
     }
 }
